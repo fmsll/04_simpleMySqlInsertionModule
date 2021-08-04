@@ -1,5 +1,6 @@
 from typing import Optional
 import logging
+import json
 
 import mysql.connector
 
@@ -11,6 +12,7 @@ logging.basicConfig(filename="imunizalog.log",
 
 # dEFINE GLOBAL VARIABLES
 mysqldb: Optional[mysql.connector.connection_cext.CMySQLConnection] = None
+db_credentials_file = "mysql_credentials.json"
 
 # dEFINE MYSQL CONNECTION PARAMETERS
 #
@@ -53,5 +55,15 @@ def connect_mysql(db_hostname: Optional[str],
         return True
 
 
+def get_mysql_credentials(credentials_file: str) -> dict:
+    with open(credentials_file) as file:
+        credentials = json.load(file)
+        return credentials
+
+
 if __name__ == "__main__":
-    pass
+    credentials = get_mysql_credentials(db_credentials_file)
+    print(connect_mysql(credentials['db_hostname'],
+                        credentials['db_username'],
+                        credentials['db_password'],
+                        credentials['db_name']))
