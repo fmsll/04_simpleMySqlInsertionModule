@@ -1,14 +1,20 @@
+import time
 from typing import Optional
 import logging
 import json
+import datetime
 
 import mysql.connector
 
-# DEFINE LOGGING PARAMETERS
+# DEFINE LOGGING
 logging.basicConfig(filename="imunizalog.log",
                     filemode='w',
                     format=":%(levelname)s: %(message)s :%(asctime)s;",
-                    level=logging.INFO)
+                    level=logging.WARNING)
+
+console = logging.StreamHandler()
+console.setLevel(logging.INFO)
+logging.getLogger().addHandler(console)
 
 # dEFINE GLOBAL VARIABLES
 #
@@ -32,10 +38,10 @@ db_password: Optional[str] = None
 db_name: Optional[str] = None
 
 
-def connect_mysql(db_hostname: Optional[str],
-                  db_username: Optional[str],
-                  db_password: Optional[str],
-                  db_name: Optional[str]
+def connect_mysql(hostname: Optional[str],
+                  username: Optional[str],
+                  password: Optional[str],
+                  name: Optional[str]
                   ) -> bool:
     """tRY TO CONNECT WITH SQL DATABASE
     """
@@ -43,10 +49,10 @@ def connect_mysql(db_hostname: Optional[str],
     try:
         logging.info("Trying connect to MySql")
         mysqldb = mysql.connector.connect(
-            host=db_hostname,
-            user=db_username,
-            password=db_password,
-            database=db_name
+            host=hostname,
+            user=username,
+            password=password,
+            database=name
         )
     except mysql.connector.errors.Error as ex:
         logging.warning("Connection try with MySQL has failed: " + ex.msg)
@@ -77,11 +83,67 @@ def set_mysql_cursor() -> bool:
         return True
 
 
+def validate_number_columns_and_values(columns: list, values: list):
+    """Validates if the number of values and columns is the same to don't have error when execute
+    INSERT function in mysql
+
+    :param columns: Columns that will be affected
+    :type columns: list
+    :param values: Values for columns
+    :type values: list
+    :return: True if the number is the same or False if not
+    :rtype: bool
+    """
+    logging.info("Validating if number of columns and values is the same")
+    if len(columns) == len(values):
+        logging.info("Validation OK")
+        return True
+    else:
+        logging.warning("")
+        return False
+
+
+def prepare_statement_for_mysql(table: str, columns: list, values: list) -> str:
+    number_values = 0
+    string_values = ""
+    logging.info("Prepering statement for MySQL")
+    if validate_number_columns_and_values(columns, values):
+        col = ', '.join(columns)
+        for value in values:
+            number_values += 1
+        while number_values > 0:
+            if number_values == 1:
+                string_values += "%s"
+                number_values += -1
+            else:
+                string_values += "%s, "
+                number_values += -1
+        statement = f'INSERT INTO {table} ({col}) VALUES ({string_values})'
+        return statement
+    else:
+        return ""
+
+
+def execute_mysql_insert(table: str, columns: list, values: list) -> bool:
+    global mysqldb
+    global mycursor
+    try:
+        statement = prepare_statement_for_mysql(table, columns, values)
+        c_values = (*values, )
+        mycursor.execute(statement, c_values)
+        mysqldb.commit()
+        return True
+    except ValueError as error:
+        print(error)
+        return False
+
+
 if __name__ == "__main__":
+    # pass
     credentials = get_mysql_credentials(db_credentials_file)
-    print(set_mysql_cursor())
-    print(connect_mysql(credentials['db_hostname'],
-                        credentials['db_username'],
-                        credentials['db_password'],
-                        credentials['db_name']))
-    print(set_mysql_cursor())
+    connect_mysql(credentials['db_hostname'],
+                  credentials['db_username'],
+                  credentials['db_password'],
+                  credentials['db_name'])
+    set_mysql_cursor()
+    execute_mysql_insert("totalCasos", ["timestamp", "total_vacinados"], [time.strftime('%Y-%m-%d %H:%M:%S'), 12])
