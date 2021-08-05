@@ -2,12 +2,11 @@ import time
 from typing import Optional
 import logging
 import json
-import datetime
 
 import mysql.connector
 
 # DEFINE LOGGING
-logging.basicConfig(filename="imunizalog.log",
+logging.basicConfig(filename="logging.log",
                     filemode='w',
                     format=":%(levelname)s: %(message)s :%(asctime)s;",
                     level=logging.INFO)
@@ -105,13 +104,11 @@ def validate_number_columns_and_values(columns: list, values: list):
 
 
 def prepare_statement_for_mysql(table: str, columns: list, values: list) -> Optional[str]:
-    number_values = 0
     string_values = ""
     logging.info("Prepering statement for MySQL")
     if validate_number_columns_and_values(columns, values):
         col = ', '.join(columns)
-        for value in values:
-            number_values += 1
+        number_values = len(values)
         while number_values > 0:
             if number_values == 1:
                 string_values += "%s"
@@ -155,4 +152,5 @@ if __name__ == "__main__":
                      credentials['db_password'],
                      credentials['db_name']):
         if set_mysql_cursor():
-            execute_mysql_insert("totalCasos", ["timestamp", "total_vacinados"], [time.strftime('%Y-%m-%d %H:%M:%S'), "12"])
+            execute_mysql_insert("totalCasos", ["timestamp", "total_vacinados"], [time.strftime('%Y-%m-%d %H:%M:%S'),
+                                                                                  "12"])
