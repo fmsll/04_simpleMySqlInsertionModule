@@ -100,11 +100,11 @@ def validate_number_columns_and_values(columns: list, values: list):
         logging.info("Validation OK")
         return True
     else:
-        logging.warning("")
+        logging.warning("NUMBER OF COLUMNS AND VALUES ARE DIFFERENT")
         return False
 
 
-def prepare_statement_for_mysql(table: str, columns: list, values: list) -> str:
+def prepare_statement_for_mysql(table: str, columns: list, values: list) -> Optional[str]:
     number_values = 0
     string_values = ""
     logging.info("Prepering statement for MySQL")
@@ -123,7 +123,7 @@ def prepare_statement_for_mysql(table: str, columns: list, values: list) -> str:
         logging.info("Statement OK")
         return statement
     else:
-        return ""
+        return None
 
 
 def execute_mysql_insert(table: str, columns: list, values: list) -> bool:
@@ -133,21 +133,26 @@ def execute_mysql_insert(table: str, columns: list, values: list) -> bool:
         logging.info("Trying commit in MySQL")
         statement = prepare_statement_for_mysql(table, columns, values)
         c_values = (*values, )
-        mycursor.execute(statement, c_values)
-        mysqldb.commit()
-        logging.info("Commit OK")
-        return True
+        if statement:
+            mycursor.execute(statement, c_values)
+            mysqldb.commit()
+            logging.info("Commit OK")
+            return True
+        else:
+            raise Exception()
     except mysql.connector.errors.Error as error:
         logging.warning("COMMIT ERROR: " + error.msg)
         return False
+    except:
+        logging.warning("COMMIT FAILED: ")
 
 
 if __name__ == "__main__":
     # pass
     credentials = get_mysql_credentials(db_credentials_file)
-    connect_mysql(credentials['db_hostname'],
-                  credentials['db_username'],
-                  credentials['db_password'],
-                  credentials['db_name'])
-    set_mysql_cursor()
-    execute_mysql_insert("totalCaso", ["timestamp", "total_vacinados"], [time.strftime('%Y-%m-%d %H:%M:%S'), 12])
+    if connect_mysql(credentials['db_hostname'],
+                     credentials['db_username'],
+                     credentials['db_password'],
+                     credentials['db_name']):
+        if set_mysql_cursor():
+            execute_mysql_insert("totalCasos", ["timestamp", "total_vacinados"], [time.strftime('%Y-%m-%d %H:%M:%S'), "12"])
