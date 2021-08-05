@@ -10,10 +10,11 @@ import mysql.connector
 logging.basicConfig(filename="imunizalog.log",
                     filemode='w',
                     format=":%(levelname)s: %(message)s :%(asctime)s;",
-                    level=logging.WARNING)
+                    level=logging.INFO)
 
 console = logging.StreamHandler()
 console.setLevel(logging.INFO)
+console.setFormatter(logging.Formatter(":%(levelname)s: %(message)s :%(asctime)s;"))
 logging.getLogger().addHandler(console)
 
 # dEFINE GLOBAL VARIABLES
@@ -119,6 +120,7 @@ def prepare_statement_for_mysql(table: str, columns: list, values: list) -> str:
                 string_values += "%s, "
                 number_values += -1
         statement = f'INSERT INTO {table} ({col}) VALUES ({string_values})'
+        logging.info("Statement OK")
         return statement
     else:
         return ""
@@ -128,13 +130,15 @@ def execute_mysql_insert(table: str, columns: list, values: list) -> bool:
     global mysqldb
     global mycursor
     try:
+        logging.info("Trying commit in MySQL")
         statement = prepare_statement_for_mysql(table, columns, values)
         c_values = (*values, )
         mycursor.execute(statement, c_values)
         mysqldb.commit()
+        logging.info("Commit OK")
         return True
-    except ValueError as error:
-        print(error)
+    except mysql.connector.errors.Error as error:
+        logging.warning("COMMIT ERROR: " + error.msg)
         return False
 
 
@@ -146,4 +150,4 @@ if __name__ == "__main__":
                   credentials['db_password'],
                   credentials['db_name'])
     set_mysql_cursor()
-    execute_mysql_insert("totalCasos", ["timestamp", "total_vacinados"], [time.strftime('%Y-%m-%d %H:%M:%S'), 12])
+    execute_mysql_insert("totalCaso", ["timestamp", "total_vacinados"], [time.strftime('%Y-%m-%d %H:%M:%S'), 12])
